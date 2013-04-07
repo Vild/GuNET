@@ -1,0 +1,44 @@
+CC := i486-mingw32-gcc
+CFLAGS := -Wall -Werror -pedantic -std=c89 -ggdb -Os -DWIN32
+LFLAGS := -shared -lm -levent_core -lws2_32 -lmswsock -ladvapi32
+
+SRC := src/
+OBJ := obj/
+BIN := bin/
+
+TARGET := $(BIN)libGuNET.dll
+TARGET_SERVER_TEST := $(BIN)GuNET_Server_Test.exe
+TARGET_CLIENT_TEST := $(BIN)GuNET_Client_Test.exe
+
+LFLAGS_TEST := -L$(BIN) -lGuNET -Wl,-rpath=. -Wl,-rpath=lib/ -Wl,-rpath=libs/
+
+OBJECTS = $(OBJ)GuNET_Server.o $(OBJ)GuNET_Client.o
+OBJECTS_SERVER_TEST = $(OBJ)GuNET_Server_Test.o
+OBJECTS_CLIENT_TEST = $(OBJ)GuNET_Client_Test.o
+
+.PHONY: all $(TARGET) $(TARGET_CLIENT_TEST) $(TARGET_SERVER_TEST)
+
+all: $(TARGET) $(TARGET_CLIENT_TEST) $(TARGET_SERVER_TEST)
+
+$(OBJ)%.o: $(SRC)%.c $(SRC)%.h
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ)%.o: $(SRC)%.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(TARGET): $(OBJECTS)
+	@mkdir -p $(BIN)
+	$(CC) $^ -o $@ $(LFLAGS) 
+
+$(TARGET_CLIENT_TEST): $(OBJECTS_CLIENT_TEST) $(TARGET)
+	@mkdir -p $(BIN)
+	$(CC) $< -o $@ $(LFLAGS_TEST)
+
+$(TARGET_SERVER_TEST): $(OBJECTS_SERVER_TEST) $(TARGET)
+	@mkdir -p $(BIN)
+	$(CC) $< -o $@ $(LFLAGS_TEST)
+
+clean:
+	rm -rf obj/* bin/*
