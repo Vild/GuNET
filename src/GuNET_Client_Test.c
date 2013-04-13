@@ -17,40 +17,47 @@
 /* ============================================================================
  * Name        : GuNET_Client_Test.c
  * Author(s)   : Dan "WildN00b" Printzell
- * Copyright   : BSD 2-Clause
+ * Copyright   : FreeBSD
  * Description : 
  * ============================================================================ */
 
 #include "../include/GuNET_Client.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
 
 static GuNET_Client_Error_t err;
 #define _(x) if ((err = x)) {printf("ERROR: %i\n", (int)err); return -1;}
 
 int main(int argc, char ** argv) {
 	GuNET_Client_t * client;
-	static char * query = "TESTING123";
-	char buf[sizeof(query)];
+	char * query = "TESTING123";
+	char * got;
+	uint16_t size = strlen(query) + 1;
 
 	printf("GuNET_Client_Init\n");
 	fflush(stdout);
 	_(GuNET_Client_Init(&client));
-	printf("GuNET_Client_SetEncryptionKey\n");
-	fflush(stdout);
-	_(GuNET_Client_SetEncryptionKey(client, query, sizeof(query)));
 	printf("GuNET_Client_Connect\n");
 	fflush(stdout);
 	_(GuNET_Client_Connect(client, "localhost", 6545));
 	printf("GuNET_Client_Send\n");
 	fflush(stdout);
-	_(GuNET_Client_Send(client, query, sizeof(query)));
+	_(GuNET_Client_Send(client, &size, sizeof(uint16_t)));
+	_(GuNET_Client_Send(client, query, size));
 	printf("GuNET_Client_Receive\n");
 	fflush(stdout);
-	_(GuNET_Client_Receive(client, buf, sizeof(buf)));
+
+	_(GuNET_Client_Receive(client, &size, sizeof(uint16_t)));
+	got = malloc(size);
+	_(GuNET_Client_Receive(client, got, sizeof(got)));
 	printf("GuNET_Client_Disconnect\n");
 	fflush(stdout);
 	_(GuNET_Client_Disconnect(client));
-	printf("%s\n", buf);
+	printf("Sent %s\n", query);
+	printf("Got %s\n", got);
+	free(got);
 	return 0;
 }
 #undef _

@@ -173,7 +173,7 @@ GuNET_Client_Error_t GuNET_Client_Disconnect(GuNET_Client_t * client) {
 }
 
 GuNET_Client_Error_t GuNET_Client_Send(GuNET_Client_t * client,
-		const void * buffer, ssize_t size) {
+		const void * buffer, int size) {
 	char * data = NULL;
 	int i;
 	int j;
@@ -220,26 +220,37 @@ GuNET_Client_Error_t GuNET_Client_Send(GuNET_Client_t * client,
 	return GuNET_CLIENT_ERROR_NONE;
 }
 
-GuNET_Client_Error_t GuNET_Client_Receive(GuNET_Client_t * client, void * buffer,
-		ssize_t size) {
+GuNET_Client_Error_t GuNET_Client_Receive(GuNET_Client_t * client,
+		void * buffer, int size) {
 	int i;
 	int j;
+	ssize_t read = 0;
 #ifdef _WIN32
-	int result;
+	int result = 0;
 #else
-	ssize_t result;
+	ssize_t result = 0;
 #endif
 
 	check(!client || !client->fd || !buffer || !size,
 			GuNET_CLIENT_ERROR_INVALID_ARGS);
 #ifdef _WIN32
-	result = recv(client->fd, buffer, size, 0);
-	((char *)buffer)[result] = '\0';
-#else
-	result = recv(client->fd, buffer, size, 0);
-	if (result < 0)
+	while (read < size) {
+		result = recv(client->fd, buffer, size, 0);
+		read += result;
+		if (result == 0)
+		break;
+		if (result < 0)
 		return GuNET_CLIENT_ERROR_SOCKET_ERROR;
-	((char *) buffer)[result] = '\0';
+	}
+#else
+	while (read < size) {
+		result = recv(client->fd, buffer, size, 0);
+		read += result;
+		if (result == 0)
+			break;
+		if (result < 0)
+			return GuNET_CLIENT_ERROR_SOCKET_ERROR;
+	}
 #endif
 
 	if (client->length) {

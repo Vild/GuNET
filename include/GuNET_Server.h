@@ -15,53 +15,69 @@
  */
 
 /* ============================================================================
- * Name        : GuNET_Client.h
+ * Name        : GuNET_Server.h
  * Author(s)   : Dan "WildN00b" Printzell
  * Copyright   : FreeBSD
  * Description : 
  * ============================================================================ */
 
-#ifndef GUNET_CLIENT_H_
-#define GUNET_CLIENT_H_
+#ifndef GUNET_SERVER_H_
+#define GUNET_SERVER_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum GuNET_Client_Error {
-	GuNET_CLIENT_ERROR_NONE = 0,
-	GuNET_CLIENT_ERROR_INVALID_ARGS,
-	GuNET_CLIENT_ERROR_MEMORY_ERROR,
-	GuNET_CLIENT_ERROR_SOCKET_ERROR,
-	GuNET_CLIENT_ERROR_NOT_CONNECTED,
-	GuNET_CLIENT_ERROR_COULD_NOT_CONNECT,
-	GuNET_CLIENT_ERROR_UNABLE_TO_RESOLVE_HOSTNAME,
-	GuNET_CLIENT_ERROR_NO_IPV6
-} GuNET_Client_Error_t;
+typedef enum GuNET_Server_Error {
+	GuNET_SERVER_ERROR_NONE = 0,
+	GuNET_SERVER_ERROR_INVALID_ARGS,
+	GuNET_SERVER_ERROR_MEMORY_ERROR,
+	GuNET_SERVER_ERROR_SOCKET_ERROR,
+	GuNET_SERVER_ERROR_NEED_MORE_DATA
+} GuNET_Server_Error_t;
 
-#define GuNET_Client_Error_ToString(x) #x
+#define GuNET_Server_Error_ToString(x) #x
 
-typedef struct GuNET_Client {
-	void * PRIVATE;
-} GuNET_Client_t;
+typedef struct GuNET_Server_Client GuNET_Server_Client_t;
 
-GuNET_Client_Error_t GuNET_Client_Init(GuNET_Client_t ** client);
-GuNET_Client_Error_t GuNET_Client_Free(GuNET_Client_t * client);
+typedef void (*GuNET_Server_Client_OnConnect_t)(GuNET_Server_Client_t * client);
+typedef void (*GuNET_Server_Client_OnDisconnect_t)(
+		GuNET_Server_Client_t * client);
+typedef void (*GuNET_Server_Client_OnData_t)(GuNET_Server_Client_t * client);
 
-GuNET_Client_Error_t GuNET_Client_SetEncryptionKey(GuNET_Client_t * client,
-		const char * key, int length);
+typedef struct GuNET_Server {
+	void * private;
+} GuNET_Server_t;
 
-GuNET_Client_Error_t GuNET_Client_Connect(GuNET_Client_t * client,
-		const char * address, int port);
-GuNET_Client_Error_t GuNET_Client_Disconnect(GuNET_Client_t * client);
+struct GuNET_Server_Client {
+	void * private;
+};
 
-GuNET_Client_Error_t GuNET_Client_Send(GuNET_Client_t * client,
+GuNET_Server_Error_t GuNET_Server_Init(GuNET_Server_t ** server, int port,
+		GuNET_Server_Client_OnConnect_t onConnect,
+		GuNET_Server_Client_OnDisconnect_t onDisconnect,
+		GuNET_Server_Client_OnData_t onData);
+GuNET_Server_Error_t GuNET_Server_Free(GuNET_Server_t * server);
+GuNET_Server_Error_t GuNET_Server_RunLoop(GuNET_Server_t * server);
+
+GuNET_Server_Error_t GuNET_Server_Client_SetEncryptionKey(
+		GuNET_Server_Client_t * client, const char * key, int length);
+GuNET_Server_Error_t GuNET_Server_Client_SetUserData(
+		GuNET_Server_Client_t * client, void * userdata);
+
+GuNET_Server_Error_t GuNET_Server_Client_GetUserData(
+		GuNET_Server_Client_t * client, void ** userdata);
+
+GuNET_Server_Error_t GuNET_Server_Client_Disconnect(
+		GuNET_Server_Client_t * client);
+
+GuNET_Server_Error_t GuNET_Server_Client_Send(GuNET_Server_Client_t * client,
 		const void * buffer, int size);
-GuNET_Client_Error_t GuNET_Client_Receive(GuNET_Client_t * client,
+GuNET_Server_Error_t GuNET_Server_Client_Receive(GuNET_Server_Client_t * client,
 		void * buffer, int size);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* GUNET_CLIENT_H_ */
+#endif /* GUNET_SERVER_H_ */

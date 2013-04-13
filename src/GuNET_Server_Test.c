@@ -15,66 +15,62 @@
  */
 
 /* ============================================================================
- * Name        : GuNET_Client.h
+ * Name        : GuNET_Server_Test.c
  * Author(s)   : Dan "WildN00b" Printzell
- * Copyright   : GPLv2, i think
+ * Copyright   : FreeBSD
  * Description : 
  * ============================================================================ */
+#include "../include/GuNET_Server.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
-#ifndef GUNET_CLIENT_H_
-#define GUNET_CLIENT_H_
+static GuNET_Server_Error_t err;
+#define _(x) if ((err = x)) {printf("ERROR: %i\n", (int)err); return -1;}
+#define __(x) if ((err = x)) {printf("ERROR: %i\n", (int)err);}
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define _WIN32_WINNT 0x0501
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef enum GuNET_Client_Error {
-	GuNET_CLIENT_ERROR_NONE = 0,
-	GuNET_CLIENT_ERROR_INVALID_ARGS,
-	GuNET_CLIENT_ERROR_MEMORY_ERROR,
-	GuNET_CLIENT_ERROR_SOCKET_ERROR,
-	GuNET_CLIENT_ERROR_COULD_NOT_CONNECT,
-	GuNET_CLIENT_ERROR_UNABLE_TO_RESOLVE_HOSTNAME,
-	GuNET_CLIENT_ERROR_NO_IPV6
-} GuNET_Client_Error_t;
-
-#define GuNET_Client_Error_ToString(x) #x
-
-typedef struct GuNET_Client {
-	char * key;
-	int length;
-#ifdef _WIN32
-	SOCKET fd;
-#else
-	int fd;
-#endif
-} GuNET_Client_t;
-
-GuNET_Client_Error_t GuNET_Client_Init(GuNET_Client_t ** client);
-GuNET_Client_Error_t GuNET_Client_Free(GuNET_Client_t * client);
-
-GuNET_Client_Error_t GuNET_Client_SetEncryptionKey(GuNET_Client_t * client,
-		const char * key, int length);
-
-GuNET_Client_Error_t GuNET_Client_Connect(GuNET_Client_t * client,
-		const char * address, int port);
-GuNET_Client_Error_t GuNET_Client_Disconnect(GuNET_Client_t * client);
-
-GuNET_Client_Error_t GuNET_Client_Send(GuNET_Client_t * client,
-		const void * buffer, int size);
-GuNET_Client_Error_t GuNET_Client_Receive(GuNET_Client_t * client,
-		void * buffer, int size);
-
-#ifdef __cplusplus
+void onConnect(GuNET_Server_Client_t * client) {
+	printf("Client connected\n");
+	fflush(stdout);
 }
-#endif
 
-#endif /* GUNET_CLIENT_H_ */
+void onDisconnect(GuNET_Server_Client_t * client) {
+	printf("Client disconnect\n");
+	fflush(stdout);
+}
+
+void onData(GuNET_Server_Client_t * client) {
+	uint16_t size;
+	char * got;
+	printf("Client send data\n");
+	fflush(stdout);
+
+	__(GuNET_Server_Client_Receive(client, &size, sizeof(uint16_t)));
+	got = malloc(size);
+	__(GuNET_Server_Client_Receive(client, got, size))
+	if (err == GuNET_SERVER_ERROR_NEED_MORE_DATA) {
+		free(got);
+		return;
+	}
+	printf("Got and sending... %s\n", got);
+	__(GuNET_Server_Client_Send(client, &size, sizeof(uint16_t)));
+	__(GuNET_Server_Client_Send(client, got, size));
+	free(got);
+}
+
+int main(int argc, char ** argv) {
+	GuNET_Server_t * server;
+
+	printf("GuNET_Server_Init\n");
+	fflush(stdout);
+	_(GuNET_Server_Init(&server, 6545, onConnect, onDisconnect, onData));
+	printf("GuNET_Server_RunLoop\n");
+	fflush(stdout);
+	_(GuNET_Server_RunLoop(server));
+	printf("GuNET_Server_Free\n");
+	fflush(stdout);
+	_(GuNET_Server_Free(server));
+	return 0;
+}
+#undef _
+#undef __
