@@ -1,6 +1,6 @@
 CC := i486-mingw32-gcc
 CFLAGS := -Wall -Werror -pedantic -std=c89 -ggdb -Os -DWIN32
-LFLAGS := -shared -lm -levent_core -lws2_32 -lmswsock -ladvapi32
+LFLAGS := -shared -lm -levent_core -lws2_32 -lmswsock -ladvapi32  -Wl,--out-implib=bin/libGuNET.lib -Wl,--export-all-symbols -Wl,--enable-auto-import
 
 SRC := src/
 OBJ := obj/

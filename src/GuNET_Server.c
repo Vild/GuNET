@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <signal.h>
 
 #define MAX_LINE 16384
 
@@ -62,6 +63,8 @@ static void GuNET_Server_Client_onConnect(evutil_socket_t fd, short event,
 static void GuNET_Server_Client_onRead(struct bufferevent * bev, void * serv);
 static void GuNET_Server_Client_onError(struct bufferevent * bev, short error,
 		void * serv);
+static void GuNET_Server_Client_onSignal(evutil_socket_t sig, short events,
+		void * user_data);
 
 static GuNET_Server_Client_t * GuNET_Server_getLastClient(
 		GuNET_Server_t * server) {
@@ -91,9 +94,19 @@ static GuNET_Server_Client_t * GuNET_Server_getClient(GuNET_Server_t * server,
 GuNET_Server_Error_t GuNET_Server_Init(GuNET_Server_t ** server, int port,
 		GuNET_Server_Client_OnConnect_t onConnect,
 		GuNET_Server_Client_OnDisconnect_t onDisconnect,
-		GuNET_Server_Client_OnData_t onData) {
+		GuNET_Server_Client_OnData_t onData, void * userdata) {
 	GuNET_Server_t * newServer;
 	struct sockaddr_in addr;
+	struct event * signal_event;
+
+#ifdef _WIN32
+	WORD wVersionRequested;
+	WSADATA wsaData;
+
+	wVersionRequested = MAKEWORD(2, 2);
+
+	WSAStartup(wVersionRequested, &wsaData);
+#endif
 
 	check(!server, GuNET_SERVER_ERROR_INVALID_ARGS);
 
@@ -122,6 +135,15 @@ GuNET_Server_Error_t GuNET_Server_Init(GuNET_Server_t ** server, int port,
 	newServer->onConnect = onConnect;
 	newServer->onDisconnect = onDisconnect;
 	newServer->onData = onData;
+	newServer->userdata = userdata;
+
+	signal_event =
+			evsignal_new(newServer->base, SIGINT, GuNET_Server_Client_onSignal, (void *)newServer->base);
+
+	if (!signal_event || event_add(signal_event, NULL ) < 0) {
+		fprintf(stderr, "Could not create/add a signal event!\n");
+		return 1;
+	}
 
 	*server = newServer;
 	return GuNET_SERVER_ERROR_NONE;
@@ -227,7 +249,7 @@ static void GuNET_Server_Client_onConnect(evutil_socket_t fd, short event,
 		client->server = server;
 		client->length = 0;
 		client->key = NULL;
-		client->userdata = NULL;
+		client->userdata = server->userdata;
 
 		client->next = NULL;
 		client->prev = GuNET_Server_getLastClient(server);
@@ -237,7 +259,7 @@ static void GuNET_Server_Client_onConnect(evutil_socket_t fd, short event,
 			client->prev->next = client;
 
 		if (server->onConnect)
-			server->onConnect(client);
+			server->onConnect(client, client->userdata);
 	}
 }
 
@@ -250,7 +272,7 @@ static void GuNET_Server_Client_onRead(struct bufferevent * bev, void * serv) {
 	while (cur != NULL ) {
 
 		if (cur->bev == bev) {
-			server->onData(cur);
+			server->onData(cur, cur->userdata);
 			return;
 		}
 		cur = cur->next;
@@ -264,8 +286,20 @@ static void GuNET_Server_Client_onError(struct bufferevent * bev, short error,
 			bufferevent_getfd(bev));
 
 	if (server->onDisconnect)
-		server->onDisconnect(client);
+		server->onDisconnect(client, client->userdata);
 	GuNET_Server_Client_free(client);
+}
+
+static void GuNET_Server_Client_onSignal(evutil_socket_t sig, short events,
+		void * user_data) {
+	struct event_base *base = user_data;
+	struct timeval delay = { 2, 0 };
+
+	if (OUTPUTERROR)
+		printf(
+				"[GuNET_Server]Caught an interrupt signal; exiting cleanly in two seconds.\n");
+
+	event_base_loopexit(base, &delay);
 }
 
 GuNET_Server_Error_t GuNET_Server_Client_SetEncryptionKey(
@@ -307,7 +341,7 @@ GuNET_Server_Error_t GuNET_Server_Client_Disconnect(
 	check(!client, GuNET_SERVER_ERROR_INVALID_ARGS);
 
 	if (client->server->onDisconnect)
-		client->server->onDisconnect(client);
+		client->server->onDisconnect(client, client->userdata);
 
 	GuNET_Server_Client_free(client);
 
@@ -330,6 +364,15 @@ GuNET_Server_Error_t GuNET_Server_Client_Receive(GuNET_Server_Client_t * client,
 
 	bufferevent_read(client->bev, buffer, size);
 	bufferevent_flush(client->bev, EV_READ, BEV_NORMAL);
+
+	return GuNET_SERVER_ERROR_NONE;
+}
+
+GuNET_Server_Error_t GuNET_Server_Client_ReceiveSize(
+		GuNET_Server_Client_t * client, int * size) {
+	check(!client || !size, GuNET_SERVER_ERROR_INVALID_ARGS);
+
+	*size = evbuffer_get_length(bufferevent_get_output(client->bev));
 
 	return GuNET_SERVER_ERROR_NONE;
 }

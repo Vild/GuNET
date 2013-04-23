@@ -40,23 +40,25 @@ typedef enum GuNET_Server_Error {
 
 typedef struct GuNET_Server_Client GuNET_Server_Client_t;
 
-typedef void (*GuNET_Server_Client_OnConnect_t)(GuNET_Server_Client_t * client);
+typedef void (*GuNET_Server_Client_OnConnect_t)(GuNET_Server_Client_t * client,
+		void * userdata);
 typedef void (*GuNET_Server_Client_OnDisconnect_t)(
-		GuNET_Server_Client_t * client);
-typedef void (*GuNET_Server_Client_OnData_t)(GuNET_Server_Client_t * client);
+		GuNET_Server_Client_t * client, void * userdata);
+typedef void (*GuNET_Server_Client_OnData_t)(GuNET_Server_Client_t * client,
+		void * userdata);
 
 typedef struct GuNET_Server {
-	void * private;
+	void * PRIVATE;
 } GuNET_Server_t;
 
 struct GuNET_Server_Client {
-	void * private;
+	void * PRIVATE;
 };
 
 GuNET_Server_Error_t GuNET_Server_Init(GuNET_Server_t ** server, int port,
 		GuNET_Server_Client_OnConnect_t onConnect,
 		GuNET_Server_Client_OnDisconnect_t onDisconnect,
-		GuNET_Server_Client_OnData_t onData);
+		GuNET_Server_Client_OnData_t onData, void * userdata);
 GuNET_Server_Error_t GuNET_Server_Free(GuNET_Server_t * server);
 GuNET_Server_Error_t GuNET_Server_RunLoop(GuNET_Server_t * server);
 
@@ -75,6 +77,8 @@ GuNET_Server_Error_t GuNET_Server_Client_Send(GuNET_Server_Client_t * client,
 		const void * buffer, int size);
 GuNET_Server_Error_t GuNET_Server_Client_Receive(GuNET_Server_Client_t * client,
 		void * buffer, int size);
+GuNET_Server_Error_t GuNET_Server_Client_ReceiveSize(
+		GuNET_Server_Client_t * client, int * size);
 
 #ifdef __cplusplus
 }

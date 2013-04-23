@@ -29,17 +29,17 @@ static GuNET_Server_Error_t err;
 #define _(x) if ((err = x)) {printf("ERROR: %i\n", (int)err); return -1;}
 #define __(x) if ((err = x)) {printf("ERROR: %i\n", (int)err);}
 
-void onConnect(GuNET_Server_Client_t * client) {
+void onConnect(GuNET_Server_Client_t * client, void * userdata) {
 	printf("Client connected\n");
 	fflush(stdout);
 }
 
-void onDisconnect(GuNET_Server_Client_t * client) {
+void onDisconnect(GuNET_Server_Client_t * client, void * userdata) {
 	printf("Client disconnect\n");
 	fflush(stdout);
 }
 
-void onData(GuNET_Server_Client_t * client) {
+void onData(GuNET_Server_Client_t * client, void * userdata) {
 	uint16_t size;
 	char * got;
 	printf("Client send data\n");
@@ -63,7 +63,7 @@ int main(int argc, char ** argv) {
 
 	printf("GuNET_Server_Init\n");
 	fflush(stdout);
-	_(GuNET_Server_Init(&server, 6545, onConnect, onDisconnect, onData));
+	_(GuNET_Server_Init(&server, 6545, onConnect, onDisconnect, onData, NULL));
 	printf("GuNET_Server_RunLoop\n");
 	fflush(stdout);
 	_(GuNET_Server_RunLoop(server));
