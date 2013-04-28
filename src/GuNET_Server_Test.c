@@ -48,10 +48,6 @@ void onData(GuNET_Server_Client_t * client, void * userdata) {
 	__(GuNET_Server_Client_Receive(client, &size, sizeof(uint16_t)));
 	got = malloc(size);
 	__(GuNET_Server_Client_Receive(client, got, size))
-	if (err == GuNET_SERVER_ERROR_NEED_MORE_DATA) {
-		free(got);
-		return;
-	}
 	printf("Got and sending... %s\n", got);
 	__(GuNET_Server_Client_Send(client, &size, sizeof(uint16_t)));
 	__(GuNET_Server_Client_Send(client, got, size));

@@ -33,7 +33,7 @@ typedef enum GuNET_Server_Error {
 	GuNET_SERVER_ERROR_INVALID_ARGS,
 	GuNET_SERVER_ERROR_MEMORY_ERROR,
 	GuNET_SERVER_ERROR_SOCKET_ERROR,
-	GuNET_SERVER_ERROR_NEED_MORE_DATA
+	GuNET_SERVER_ERROR_GOT_EXIT_EVENT
 } GuNET_Server_Error_t;
 
 #define GuNET_Server_Error_ToString(x) #x
@@ -60,7 +60,10 @@ GuNET_Server_Error_t GuNET_Server_Init(GuNET_Server_t ** server, int port,
 		GuNET_Server_Client_OnDisconnect_t onDisconnect,
 		GuNET_Server_Client_OnData_t onData, void * userdata);
 GuNET_Server_Error_t GuNET_Server_Free(GuNET_Server_t * server);
+GuNET_Server_Error_t GuNET_Server_Run(GuNET_Server_t * server);
 GuNET_Server_Error_t GuNET_Server_RunLoop(GuNET_Server_t * server);
+GuNET_Server_Error_t GuNET_Server_RunTimeout(GuNET_Server_t * server,
+		int milliseconds);
 
 GuNET_Server_Error_t GuNET_Server_Client_SetEncryptionKey(
 		GuNET_Server_Client_t * client, const char * key, int length);
